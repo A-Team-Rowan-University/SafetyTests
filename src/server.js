@@ -44,10 +44,10 @@ function parseQuestions(questions_spreadsheet){
                         return {
                             text: question,
                             correct: index === row[1]
-                        }
-                    });
-                }
-            });
+                        };
+                    })
+                };
+            })
         };
     });
 }
