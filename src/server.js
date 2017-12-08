@@ -1,9 +1,7 @@
 
-var questions_spreadsheet_id = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
-var questions_spreadsheet = SpreadsheetApp.openById(questions_spreadsheet_id);
-var questions_spreadsheet_header_rows = 3;
-
-function parseQuestions(){
+function parseQuestions(questions_spreadsheet){
+    var questions_spreadsheet_header_rows = 3;
+    var questions_desired_locaion = 'B2';
 
     var category_sheets = questions_spreadsheet.getSheets();
 
@@ -14,6 +12,7 @@ function parseQuestions(){
 
         return {
             name: sheet.getName(),
+            desired_questions: sheet.getRange(questions_desired_locaion).getValue(),
             questions: values.map(function(row) {
                 return {
                     title: row[0],
@@ -24,6 +23,7 @@ function parseQuestions(){
         };
     });
 }
+
 
 // Returns a list of `desired_questions` number of question numbers
 // pulled randomly from 0 to `total_questions` - 1
@@ -57,7 +57,10 @@ function shuffleArray(array) {
 }
 
 function tests() {
-    var questions = parseQuestions();
+    var questions_spreadsheet_id = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
+    var questions_spreadsheet = SpreadsheetApp.openById(questions_spreadsheet_id);
+
+    var questions = parseQuestions(questions_spreadsheet);
     Logger.log(JSON.stringify(questions, null, 2));
 }
 
