@@ -10,16 +10,44 @@ function parseQuestions(questions_spreadsheet){
         var range = sheet.getRange(questions_spreadsheet_header_rows + 1, 1, sheet.getLastRow() - questions_spreadsheet_header_rows, sheet.getLastColumn());
         var values = range.getValues();
 
+        /*
+         *  {
+         *      name: Name of the category
+         *      desired_questions: Number of questions that should be on a test from this category
+         *      questions: A list of questions that could be on the test
+         *  }
+         */
+
         return {
             name: sheet.getName(),
             desired_questions: sheet.getRange(questions_desired_locaion).getValue(),
-            questions: values.map(function(row) {
+            questions: values.map(function (row) {
+
+                /*
+                 *  {
+                 *      text: The text of the question
+                 *      answers: A list of answers to the question
+                 *  }
+                 */
+
                 return {
-                    title: row[0],
-                    correct: row[1],
-                    questions: row.splice(2, 6)
+                    text: row[0],
+                    answers: row.splice(2, 6).map(function (question, index) {
+
+                        /*
+                         *  {
+                         *      text: The text of the answer
+                         *      correct: whether this is the correct answer
+                         *  }
+                         */
+
+                        return {
+                            text: question,
+                            correct: index === row[1]
+                        }
+                    });
                 }
-            })
+            });
         };
     });
 }
