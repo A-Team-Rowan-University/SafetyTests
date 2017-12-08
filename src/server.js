@@ -1,5 +1,5 @@
 
-function parseQuestions(questions_spreadsheet){
+function parseQuestions(questions_spreadsheet) {
     var questions_spreadsheet_header_rows = 3;
     var questions_desired_locaion = 'B2';
 
@@ -52,6 +52,27 @@ function parseQuestions(questions_spreadsheet){
     });
 }
 
+function randomizeQuestions(questions) {
+    //Logger.log(JSON.stringify(questions, null, 2));
+    var randomized_questions = questions.reduce(function (randomized_questions, category) {
+
+
+        // Shuffle the answers of the questions
+        category.questions.forEach(function (question) {
+            shuffleArray(question.answers);
+        });
+
+        shuffleArray(category.questions);
+
+        return randomized_questions.concat(category.questions.splice(0, category.desired_questions));
+
+    }, []);
+
+    shuffleArray(randomized_questions);
+
+    return randomized_questions;
+}
+
 
 // Returns a list of `desired_questions` number of question numbers
 // pulled randomly from 0 to `total_questions` - 1
@@ -90,5 +111,8 @@ function tests() {
 
     var questions = parseQuestions(questions_spreadsheet);
     Logger.log(JSON.stringify(questions, null, 2));
+
+    var random_questions = randomizeQuestions(questions);
+    Logger.log(JSON.stringify(random_questions, null, 2));
 }
 
