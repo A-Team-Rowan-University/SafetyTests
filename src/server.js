@@ -129,6 +129,14 @@ function onTestFormSubmit(event) {
 
     Logger.log(form_id);
 
+    var form = FormApp.openById(form_id);
+
+    var triggers = ScriptApp.getUserTriggers(form);
+
+    triggers.forEach(function (trigger) {
+        ScriptApp.deleteTrigger(trigger);
+    });
+
     sheet.getRange(row_number + 1, 4).setValue(event.response.getTimestamp());
     sheet.getRange(row_number + 1, 5).setValue(event.response.getRespondentEmail());
 }
