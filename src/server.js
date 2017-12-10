@@ -73,22 +73,68 @@ function randomizeQuestions(questions) {
     return randomized_questions;
 }
 
+function generateTest(name, questions) {
+    //var form = FormApp.create(name);
 
-// Returns a list of `desired_questions` number of question numbers
-// pulled randomly from 0 to `total_questions` - 1
-function randomQuestionNumbers(total_questions, desired_questions) {
+    var form_template_file = DriveApp.getFileById("1ryMLer5OjMxFNwRdeXQYH4LYBvIhEIMYSSzwt0UozVQ");
+    var form_folder = DriveApp.getFolderById("1F3_wcZWBNw1sQxZjt1Uh4samBZwM-6h6");
+    var form_file = form_template_file.makeCopy(form_folder);
 
-    var question_numbers = [];
+    form_file.setName(name);
 
-    for(var i = 0; i < total_questions; i++){
-        question_numbers.push(i);
-    }
+    var form = FormApp.openById(form_file.getId());
 
-    shuffleArray(question_numbers);
+    var trigger = ScriptApp.newTrigger("onTestFormSubmit").forForm(form).onFormSubmit().create();
 
-    Logger.log(question_numbers);
+    form.setIsQuiz(true);
 
-    return question_numbers.slice(0, desired_questions);
+    questions.forEach(function (question) {
+        var item = form.addMultipleChoiceItem();
+        item.setRequired(true);
+        item.setTitle(question.text);
+        item.setChoices(question.answers.map(function (answer) {
+            return item.createChoice(answer.text, answer.correct);
+        }));
+    });
+
+    var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
+    var sheet = spreadsheet.getSheetByName("Log");
+    sheet.appendRow([
+        trigger.getUniqueId(),
+        form.getId(),
+        form.getPublishedUrl(),
+    ]);
+}
+
+function onTestFormSubmit(event) {
+    Logger.log("Submitted");
+
+    var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
+    var sheet = spreadsheet.getSheetByName("Log");
+    var range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
+    var values = range.getValues();
+
+    var row_number = 0;
+
+    values.forEach(function (row, index) {
+        if (row[0] === event.triggerUid) {
+            row_number = index;
+            Logger.log("Found id");
+        }
+    });
+
+    Logger.log(row_number);
+
+    var form_id = values[row_number][1];
+
+    Logger.log(form_id);
+
+    var form_file = DriveApp.getFileById(form_id);
+    Logger.log(form_file);
+    form_file.setTrashed(true);
+
+    sheet.getRange(row_number + 1, 4).setValue(event.response.getTimestamp());
+    sheet.getRange(row_number + 1, 5).setValue(event.response.getRespondentEmail());
 }
 
 /**
@@ -114,5 +160,7 @@ function tests() {
 
     var random_questions = randomizeQuestions(questions);
     Logger.log(JSON.stringify(random_questions, null, 2));
+
+    generateTest("Testy Testing", random_questions);
 }
 
