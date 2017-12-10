@@ -87,6 +87,10 @@ function generateTest(name, questions) {
     var trigger = ScriptApp.newTrigger("onTestFormSubmit").forForm(form).onFormSubmit().create();
 
     form.setIsQuiz(true);
+    form.setLimitOneResponsePerUser(true);
+    form.setRequireLogin(true);
+    form.setShowLinkToRespondAgain(false);
+    form.setAcceptingResponses(true);
 
     questions.forEach(function (question) {
         var item = form.addMultipleChoiceItem();
@@ -130,6 +134,8 @@ function onTestFormSubmit(event) {
     Logger.log(form_id);
 
     var form = FormApp.openById(form_id);
+
+    form.setAcceptingResponses(false);
 
     var triggers = ScriptApp.getUserTriggers(form);
 
