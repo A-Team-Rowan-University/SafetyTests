@@ -129,10 +129,6 @@ function onTestFormSubmit(event) {
 
     Logger.log(form_id);
 
-    var form_file = DriveApp.getFileById(form_id);
-    Logger.log(form_file);
-    form_file.setTrashed(true);
-
     sheet.getRange(row_number + 1, 4).setValue(event.response.getTimestamp());
     sheet.getRange(row_number + 1, 5).setValue(event.response.getRespondentEmail());
 }
