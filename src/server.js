@@ -144,8 +144,28 @@ function onTestFormSubmit(event) {
         ScriptApp.deleteTrigger(trigger);
     });
 
+    var earned_points = 0;
+    var total_points = 0;
+
+    var gradable_responses = event.response.getGradableItemResponses();
+    gradable_responses.forEach(function (response) {
+        earned_points += response.getScore();
+
+        var item = response.getItem();
+
+        if (item.getType() == FormApp.ItemType.MULTIPLE_CHOICE){
+            var multple_choice_item = item.asMultipleChoiceItem();
+            total_points += multple_choice_item.getPoints();
+        }
+    });
+
+    var score = earned_points / total_points;
+
     sheet.getRange(row_number + 1, 4).setValue(event.response.getTimestamp());
     sheet.getRange(row_number + 1, 5).setValue(event.response.getRespondentEmail());
+    sheet.getRange(row_number + 1, 6).setValue(earned_points);
+    sheet.getRange(row_number + 1, 7).setValue(total_points);
+    sheet.getRange(row_number + 1, 8).setValue(score);
 }
 
 /**
