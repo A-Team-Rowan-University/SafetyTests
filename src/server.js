@@ -95,6 +95,7 @@ function generateTest(name, questions) {
     questions.forEach(function (question) {
         var item = form.addMultipleChoiceItem();
         item.setRequired(true);
+        item.setPoints(1);
         item.setTitle(question.text);
         item.setChoices(question.answers.map(function (answer) {
             return item.createChoice(answer.text, answer.correct);
