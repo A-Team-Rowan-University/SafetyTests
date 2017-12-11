@@ -1,4 +1,43 @@
 
+var QUESTIONS_SPREADSHEET_ID = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
+
+function setup() {
+    var test_request_form = FormApp.openById("1mgpeGgMHYTU4HBDLLaRxNT4OrHm7aIZHcN09W2z7FhM");
+    ScriptApp.newTrigger("");
+
+    var test_generate_form = FormApp.openById("1Op7F5dOdOCj8A8V0gC6FSOU7I1YXOmMRPvBeQYCQfIw");
+    ScriptApp.newTrigger("onGenerateTests").forForm(test_generate_form).onFormSubmit().create();
+}
+
+function onGenerateTests(event) {
+
+    var responses = event.response.getItemResponses();
+
+    var tests_to_generate = 0;
+
+    responses.forEach(function (response) {
+        if (response.getItem().getTitle() === "Tests to generate") {
+            tests_to_generate = response.getResponse();
+        }
+    });
+
+    Logger.log("Generating tests: " + tests_to_generate);
+
+    var questions_sheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
+
+    // Make into JSON so that eash test uses a deep clone of the questions array
+    var questions = JSON.stringify(parseQuestions(questions_sheet));
+    Logger.log("All questions: " + questions);
+
+    for (var i = 0; i < tests_to_generate; i++) {
+        Logger.log("Generating test: " + i);
+        var random_questions = randomizeQuestions(JSON.parse(questions));
+        Logger.log("Questions: " + JSON.stringify(random_questions, null, 2));
+        generateTest(random_questions);
+    }
+}
+
+
 function parseQuestions(questions_spreadsheet) {
     var questions_spreadsheet_header_rows = 3;
     var questions_desired_locaion = 'B2';
@@ -73,18 +112,18 @@ function randomizeQuestions(questions) {
     return randomized_questions;
 }
 
-function generateTest(name, questions) {
+function generateTest(questions) {
     //var form = FormApp.create(name);
 
     var form_template_file = DriveApp.getFileById("1ryMLer5OjMxFNwRdeXQYH4LYBvIhEIMYSSzwt0UozVQ");
     var form_folder = DriveApp.getFolderById("1F3_wcZWBNw1sQxZjt1Uh4samBZwM-6h6");
     var form_file = form_template_file.makeCopy(form_folder);
 
-    form_file.setName(name);
-
     var form = FormApp.openById(form_file.getId());
 
     var trigger = ScriptApp.newTrigger("onTestFormSubmit").forForm(form).onFormSubmit().create();
+
+    form_file.setName(trigger.getUniqueId());
 
     form.setIsQuiz(true);
     form.setLimitOneResponsePerUser(true);
@@ -183,8 +222,7 @@ function shuffleArray(array) {
 }
 
 function tests() {
-    var questions_spreadsheet_id = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
-    var questions_spreadsheet = SpreadsheetApp.openById(questions_spreadsheet_id);
+    var questions_spreadsheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
 
     var questions = parseQuestions(questions_spreadsheet);
     Logger.log(JSON.stringify(questions, null, 2));
