@@ -1,12 +1,43 @@
 
 var QUESTIONS_SPREADSHEET_ID = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
+var RESPONSES_SPREADSHEET_ID = "1PGn4DhoIUFAv0FRgnaVG7j67-weWkJrhZxxY5zR30F0";
 
-function setup() {
-    var test_request_form = FormApp.openById("1mgpeGgMHYTU4HBDLLaRxNT4OrHm7aIZHcN09W2z7FhM");
-    ScriptApp.newTrigger("");
-
+function setupGenerateTests() {
     var test_generate_form = FormApp.openById("1Op7F5dOdOCj8A8V0gC6FSOU7I1YXOmMRPvBeQYCQfIw");
     ScriptApp.newTrigger("onGenerateTests").forForm(test_generate_form).onFormSubmit().create();
+}
+
+function setupResponseTests() {
+    var test_response_spreadsheet = SpreadsheetApp.openById("1PGn4DhoIUFAv0FRgnaVG7j67-weWkJrhZxxY5zR30F0");
+    ScriptApp.newTrigger("onTestFormSubmit").forSpreadsheet(test_response_spreadsheet).onFormSubmit().create();
+}
+
+function setupRequestTests() {
+    var test_request_form = FormApp.openById("1mgpeGgMHYTU4HBDLLaRxNT4OrHm7aIZHcN09W2z7FhM");
+    ScriptApp.newTrigger("onRequestTest");
+}
+
+function onRequestTest(event) {
+    var log_spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
+    var log_sheet = log_spreadsheet.getSheetByName("Log");
+    var log_range = log_sheet.getRange(1, 1, log_sheet.getLastRow(), log_sheet.getLastRow());
+    var log_values = log_range.getValues();
+
+    var open_row = null;
+
+    log_value.some(function (row) {
+        if (!row[3]) {
+            open_row = row;
+            return true;
+        } else {
+            return false;
+        }
+    });
+
+    //if (open_row === null) {
+
+
+
 }
 
 function onGenerateTests(event) {
@@ -23,6 +54,9 @@ function onGenerateTests(event) {
 
     Logger.log("Generating tests: " + tests_to_generate);
 
+    var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
+    var sheet = spreadsheet.getSheetByName("Log");
+
     var questions_sheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
 
     // Make into JSON so that eash test uses a deep clone of the questions array
@@ -33,7 +67,10 @@ function onGenerateTests(event) {
         Logger.log("Generating test: " + i);
         var random_questions = randomizeQuestions(JSON.parse(questions));
         Logger.log("Questions: " + JSON.stringify(random_questions, null, 2));
-        generateTest(random_questions);
+        var info = generateTest(random_questions);
+        sheet.appendRow(info.concat([
+            "Not emailed"
+        ]));
     }
 }
 
@@ -121,15 +158,12 @@ function generateTest(questions) {
 
     var form = FormApp.openById(form_file.getId());
 
-    var trigger = ScriptApp.newTrigger("onTestFormSubmit").forForm(form).onFormSubmit().create();
-
-    form_file.setName(trigger.getUniqueId());
-
     form.setIsQuiz(true);
     form.setLimitOneResponsePerUser(true);
     form.setRequireLogin(true);
     form.setShowLinkToRespondAgain(false);
     form.setAcceptingResponses(true);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, RESPONSES_SPREADSHEET_ID);
 
     questions.forEach(function (question) {
         var item = form.addMultipleChoiceItem();
@@ -141,17 +175,20 @@ function generateTest(questions) {
         }));
     });
 
-    var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
-    var sheet = spreadsheet.getSheetByName("Log");
-    sheet.appendRow([
-        trigger.getUniqueId(),
+    return [
         form.getId(),
+        form.getEditUrl(),
         form.getPublishedUrl(),
-    ]);
+    ];
 }
 
 function onTestFormSubmit(event) {
     Logger.log("Submitted");
+
+    Logger.log(JSON.stringify(event));
+
+    var form_url = event.range.getSheet().getFormUrl();
+    Logger.log(form_url);
 
     var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
     var sheet = spreadsheet.getSheetByName("Log");
@@ -160,8 +197,13 @@ function onTestFormSubmit(event) {
 
     var row_number = 0;
 
+    var form_id = form_url.match(/d\/([^/]+)\/viewform/)[1];
+    Logger.log(form_id);
+
     values.forEach(function (row, index) {
-        if (row[0] === event.triggerUid) {
+        Logger.log(row);
+        Logger.log(typeof row[0]);
+        if (row[0] === form_id) {
             row_number = index;
             Logger.log("Found id");
         }
@@ -169,42 +211,24 @@ function onTestFormSubmit(event) {
 
     Logger.log(row_number);
 
-    var form_id = values[row_number][1];
+    var form_id = values[row_number][0];
 
     Logger.log(form_id);
 
     var form = FormApp.openById(form_id);
+    Logger.log(JSON.stringify(form));
+    Logger.log(form);
 
     form.setAcceptingResponses(false);
 
-    var triggers = ScriptApp.getUserTriggers(form);
+    Logger.log(JSON.stringify(event.namedValues, null, 2));
 
-    triggers.forEach(function (trigger) {
-        ScriptApp.deleteTrigger(trigger);
-    });
-
-    var earned_points = 0;
-    var total_points = 0;
-
-    var gradable_responses = event.response.getGradableItemResponses();
-    gradable_responses.forEach(function (response) {
-        earned_points += response.getScore();
-
-        var item = response.getItem();
-
-        if (item.getType() == FormApp.ItemType.MULTIPLE_CHOICE){
-            var multple_choice_item = item.asMultipleChoiceItem();
-            total_points += multple_choice_item.getPoints();
-        }
-    });
-
-    var score = earned_points / total_points;
-
-    sheet.getRange(row_number + 1, 4).setValue(event.response.getTimestamp());
-    sheet.getRange(row_number + 1, 5).setValue(event.response.getRespondentEmail());
-    sheet.getRange(row_number + 1, 6).setValue(earned_points);
-    sheet.getRange(row_number + 1, 7).setValue(total_points);
-    sheet.getRange(row_number + 1, 8).setValue(score);
+    sheet.getRange(row_number + 1, 4).setValue("Response Received");
+    sheet.getRange(row_number + 1, 5).setValue(event.namedValues['Timestamp']);
+    sheet.getRange(row_number + 1, 6).setValue(event.namedValues['Email Address']);
+    sheet.getRange(row_number + 1, 7).setValue(event.namedValues['Score']);
+    sheet.getRange(row_number + 1, 8).setValue(event.namedValues['Class']);
+    sheet.getRange(row_number + 1, 9).setValue(event.namedValues['Section']);
 }
 
 /**
