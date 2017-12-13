@@ -14,7 +14,7 @@ function setupResponseTests() {
 
 function setupRequestTests() {
     var test_request_form = FormApp.openById("1mgpeGgMHYTU4HBDLLaRxNT4OrHm7aIZHcN09W2z7FhM");
-    ScriptApp.newTrigger("onRequestTest");
+    ScriptApp.newTrigger("onRequestTest").forForm(test_request_form).onFormSubmit().create();
 }
 
 function onRequestTest(event) {
@@ -24,20 +24,48 @@ function onRequestTest(event) {
     var log_values = log_range.getValues();
 
     var open_row = null;
+    var open_row_index = 0;
 
-    log_value.some(function (row) {
-        if (!row[3]) {
+    log_values.some(function (row, index) {
+        if (row[3] === "Generated") {
             open_row = row;
+            open_row_index = index;
             return true;
         } else {
             return false;
         }
     });
 
-    //if (open_row === null) {
+    if (open_row === null) {
+        // Generate test
+        var questions_sheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
+        var questions = parseQuestions(questions_sheet);
+        var random_questions = randomizeQuestions(questions);
+        var info = generateTest(random_questions);
 
+        open_row = info.concat([
+            "Emailed"
+        ]);
 
+        log_sheet.appendRow(open_row);
+    } else {
+        log_sheet.getRange(open_row_index + 1, 4).setValue("Emailed");
+    }
 
+    Logger.log(event.response.getRespondentEmail());
+
+    var person = PersonLookup.lookupPerson("Email", event.response.getRespondentEmail());
+
+    GmailApp.sendEmail(
+        event.response.getRespondentEmail(),
+        "Safety Test",
+        "Hello " + person["First Name"] + "\n"
+        + "\n"
+        + "Here is your safety test: \n" + open_row[2] + "\n"
+        + "\n"
+        + "\n"
+        + " - The ECE Gods"
+    );
 }
 
 function onGenerateTests(event) {
