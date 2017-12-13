@@ -61,15 +61,16 @@ function onGenerateTests(event) {
 
     // Make into JSON so that eash test uses a deep clone of the questions array
     var questions = JSON.stringify(parseQuestions(questions_sheet));
-    Logger.log("All questions: " + questions);
 
     for (var i = 0; i < tests_to_generate; i++) {
         Logger.log("Generating test: " + i);
+
         var random_questions = randomizeQuestions(JSON.parse(questions));
-        Logger.log("Questions: " + JSON.stringify(random_questions, null, 2));
+
         var info = generateTest(random_questions);
+
         sheet.appendRow(info.concat([
-            "Not emailed"
+            "Generated",
         ]));
     }
 }
@@ -221,14 +222,17 @@ function onTestFormSubmit(event) {
 
     form.setAcceptingResponses(false);
 
-    Logger.log(JSON.stringify(event.namedValues, null, 2));
+    var string_score = event.namedValues['Score'][0];
+    var points = string_score.split(" / ");
+    var score = points[0] / points[1];
 
     sheet.getRange(row_number + 1, 4).setValue("Response Received");
-    sheet.getRange(row_number + 1, 5).setValue(event.namedValues['Timestamp']);
-    sheet.getRange(row_number + 1, 6).setValue(event.namedValues['Email Address']);
-    sheet.getRange(row_number + 1, 7).setValue(event.namedValues['Score']);
-    sheet.getRange(row_number + 1, 8).setValue(event.namedValues['Class']);
-    sheet.getRange(row_number + 1, 9).setValue(event.namedValues['Section']);
+    sheet.getRange(row_number + 1, 5).setValue(event.namedValues['Timestamp'][0]);
+    sheet.getRange(row_number + 1, 6).setValue(event.namedValues['Email Address'][0]);
+    sheet.getRange(row_number + 1, 7).setValue(score);
+    sheet.getRange(row_number + 1, 8).setValue(score >= 0.8);
+    sheet.getRange(row_number + 1, 9).setValue(event.namedValues['Class'][0]);
+    sheet.getRange(row_number + 1, 10).setValue(event.namedValues['Section'][0]);
 }
 
 /**
