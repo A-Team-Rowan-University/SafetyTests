@@ -135,9 +135,11 @@ function parseQuestions(questions_spreadsheet) {
                  *  }
                  */
 
+                Logger.log(row);
+
                 return {
                     text: row[0],
-                    answers: row.splice(2, 6).map(function (question, index) {
+                    answers: row.slice(2, 6).map(function (answer, index) {
 
                         /*
                          *  {
@@ -146,9 +148,11 @@ function parseQuestions(questions_spreadsheet) {
                          *  }
                          */
 
+                        Logger.log(answer + " " + index + " " + row[1] + " " + (index === row[1] - 1));
+
                         return {
-                            text: question,
-                            correct: index === row[1]
+                            text: answer,
+                            correct: index === row[1] - 1
                         };
                     })
                 };
@@ -250,17 +254,46 @@ function onTestFormSubmit(event) {
 
     form.setAcceptingResponses(false);
 
-    var string_score = event.namedValues['Score'][0];
+    var response_values = event.namedValues;
+
+    var string_score = response_values['Score'][0];
     var points = string_score.split(" / ");
     var score = points[0] / points[1];
 
     sheet.getRange(row_number + 1, 4).setValue("Response Received");
-    sheet.getRange(row_number + 1, 5).setValue(event.namedValues['Timestamp'][0]);
-    sheet.getRange(row_number + 1, 6).setValue(event.namedValues['Email Address'][0]);
+    sheet.getRange(row_number + 1, 5).setValue(response_values['Timestamp'][0]);
+    sheet.getRange(row_number + 1, 6).setValue(response_values['Email Address'][0]);
     sheet.getRange(row_number + 1, 7).setValue(score);
     sheet.getRange(row_number + 1, 8).setValue(score >= 0.8);
-    sheet.getRange(row_number + 1, 9).setValue(event.namedValues['Class'][0]);
-    sheet.getRange(row_number + 1, 10).setValue(event.namedValues['Section'][0]);
+    sheet.getRange(row_number + 1, 9).setValue(response_values['Class'][0]);
+    sheet.getRange(row_number + 1, 10).setValue(response_values['Section'][0]);
+
+    var questions_spreadsheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
+
+    questions_spreadsheet.getSheets().forEach(function (sheet) {
+        var range = sheet.getRange(4, 1, sheet.getLastRow(), sheet.getLastColumn());
+        var values = range.getValues();
+
+        values.forEach(function (row, index) {
+            // Go over each question to see if this is the one
+            var row_question = row[0];
+            var correct_number = row[1];
+            var correct_answer = row[1 + correct_number];
+
+            var total_count_range = sheet.getRange(index + 4, 8);
+            var correct_count_range = sheet.getRange(index + 4, 7);
+
+            for (current_question in response_values) {
+                if (current_question === row_question) {
+                    total_count_range.setValue(total_count_range.getValue() + 1);
+                    Logger.log(response_values[current_question][0] + " " + correct_answer);
+                    if (response_values[current_question][0] === correct_answer) {
+                        correct_count_range.setValue(correct_count_range.getValue() + 1);
+                    }
+                }
+            }
+        });
+    });
 }
 
 /**
