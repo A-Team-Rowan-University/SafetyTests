@@ -259,14 +259,26 @@ function onTestFormSubmit(event) {
     var string_score = response_values['Score'][0];
     var points = string_score.split(" / ");
     var score = points[0] / points[1];
+    var passed = score >= 0.8;
+
+    var timestamp = response_values['Timestamp'][0];
+    var email = response_values['Email Address'][0];
+    var ece_class = response_values['Class'][0];
+    var section = response_values['Section'][0];
+
+    var person = PersonLookup.lookupPerson("Email", email);
+    var first_name = person["First Name"];
+    var last_name = person["Last Name"];
+    var banner_id = person["Banner ID"];
+    var department = person["Department"];
 
     sheet.getRange(row_number + 1, 4).setValue("Response Received");
-    sheet.getRange(row_number + 1, 5).setValue(response_values['Timestamp'][0]);
-    sheet.getRange(row_number + 1, 6).setValue(response_values['Email Address'][0]);
+    sheet.getRange(row_number + 1, 5).setValue(timestamp);
+    sheet.getRange(row_number + 1, 6).setValue(email);
     sheet.getRange(row_number + 1, 7).setValue(score);
-    sheet.getRange(row_number + 1, 8).setValue(score >= 0.8);
-    sheet.getRange(row_number + 1, 9).setValue(response_values['Class'][0]);
-    sheet.getRange(row_number + 1, 10).setValue(response_values['Section'][0]);
+    sheet.getRange(row_number + 1, 8).setValue(passed);
+    sheet.getRange(row_number + 1, 9).setValue(ece_class);
+    sheet.getRange(row_number + 1, 10).setValue(section);
 
     var questions_spreadsheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
 
@@ -294,6 +306,64 @@ function onTestFormSubmit(event) {
             }
         });
     });
+
+    if (passed) {
+        // Generate certificate and email it
+        var copyFile = DriveApp.getFileById("1LizvbFy_fE3wYSTO1UmfKKI_7hC6JvT0b7lDWz7NpGo").makeCopy();
+        var copyId = copyFile.getId();
+        var copyDoc = DocumentApp.openById(copyId);
+        var copyBody = copyDoc.getActiveSection();
+
+        var today = new Date();
+        var dd = today.getDate();
+        var mm = today.getMonth()+1; //January is 0!
+        var yyyy = today.getFullYear();
+
+        if(dd<10) {
+          dd = '0'+dd
+        }
+
+        if(mm<10) {
+          mm = '0'+mm
+        }
+
+        var date = mm + '/' + dd + '/' + yyyy;
+
+        copyBody.replaceText('<<FirstName>>', first_name);
+        copyBody.replaceText('<<LastName>>', last_name);
+        copyBody.replaceText('<<BannerID>>', banner_id);
+        copyBody.replaceText('<<Email>>', email);
+        copyBody.replaceText('<<Department>>', department);
+        copyBody.replaceText('<<ClassCode>>', ece_class);
+        copyBody.replaceText('<<Section>>', section);
+        copyBody.replaceText('<<CompletionDate>>', date);
+        copyBody.replaceText('<<CalculatedScore>>', score*100);
+
+        copyDoc.saveAndClose();
+
+        var pdf = DriveApp.createFile(copyFile.getAs('application/pdf'));
+
+        copyFile.setTrashed(true);
+
+        var folder = DriveApp.getFolderById("15PN_LPof9aZfnmHQ5liUgZAl2vnIwmTP");
+
+        folder.addFile(pdf);
+
+        pdf.setName(banner_id + last_name + "08/31/2018");
+
+        GmailApp.sendEmail(
+            email,
+            "ECE Safety Training Certificate",
+            "Hello " + first_name + ",\n" +
+            "\n" +
+            "Attatched is your safety training certificate\n" +
+            "\n" +
+            "\n" +
+            " - The ECE Gods",
+            {attachments: [pdf]}
+        );
+
+    }
 }
 
 /**
