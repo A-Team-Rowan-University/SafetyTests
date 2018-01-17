@@ -22,9 +22,6 @@ var test_request_form_id     = get_property("Test request form ID");
 var certificate_template_id  = get_property("Certificate template ID");
 var certificate_folder_id    = get_property("Certificate folder ID");
 
-var QUESTIONS_SPREADSHEET_ID = "1aMbrM9llf225flyTBc6VYilygD1UVqzncORPnOlxGws";
-var RESPONSES_SPREADSHEET_ID = "1PGn4DhoIUFAv0FRgnaVG7j67-weWkJrhZxxY5zR30F0";
-
 function setupProperties() {
     properties.setProperties({
         "Questions spreadsheet ID": "",
@@ -41,25 +38,21 @@ function setupProperties() {
 
 function setupGenerateTests() {
     var test_generate_form = FormApp.openById(test_generate_form_id);
-    //var test_generate_form = FormApp.openById("1Op7F5dOdOCj8A8V0gC6FSOU7I1YXOmMRPvBeQYCQfIw");
     ScriptApp.newTrigger("onGenerateTests").forForm(test_generate_form).onFormSubmit().create();
 }
 
 function setupResponseTests() {
     var test_response_spreadsheet = SpreadsheetApp.openById(responses_spreadsheet_id);
-    //var test_response_spreadsheet = SpreadsheetApp.openById("1PGn4DhoIUFAv0FRgnaVG7j67-weWkJrhZxxY5zR30F0");
     ScriptApp.newTrigger("onTestFormSubmit").forSpreadsheet(test_response_spreadsheet).onFormSubmit().create();
 }
 
 function setupRequestTests() {
     var test_request_form = FormApp.openById(test_request_form_id);
-    //var test_request_form = FormApp.openById("1mgpeGgMHYTU4HBDLLaRxNT4OrHm7aIZHcN09W2z7FhM");
     ScriptApp.newTrigger("onRequestTest").forForm(test_request_form).onFormSubmit().create();
 }
 
 function onRequestTest(event) {
     var log_spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    //var log_spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
     var log_sheet = log_spreadsheet.getSheetByName("Log");
     var log_range = log_sheet.getRange(1, 1, log_sheet.getLastRow(), log_sheet.getLastRow());
     var log_values = log_range.getValues();
@@ -124,11 +117,9 @@ function onGenerateTests(event) {
     Logger.log("Generating tests: " + tests_to_generate);
 
     var spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    //var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
     var sheet = spreadsheet.getSheetByName("Log");
 
     var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
-    //var questions_sheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
 
     // Make into JSON so that eash test uses a deep clone of the questions array
     var questions = JSON.stringify(parseQuestions(questions_sheet));
@@ -205,7 +196,6 @@ function parseQuestions(questions_spreadsheet) {
 }
 
 function randomizeQuestions(questions) {
-    //Logger.log(JSON.stringify(questions, null, 2));
     var randomized_questions = questions.reduce(function (randomized_questions, category) {
 
 
@@ -226,12 +216,9 @@ function randomizeQuestions(questions) {
 }
 
 function generateTest(questions) {
-    //var form = FormApp.create(name);
 
     var form_template_file = DriveApp.getFileById(test_template_form_id);
-    //var form_template_file = DriveApp.getFileById("1ryMLer5OjMxFNwRdeXQYH4LYBvIhEIMYSSzwt0UozVQ");
     var form_folder = DriveApp.getFolderById(test_folder_id);
-    //var form_folder = DriveApp.getFolderById("1F3_wcZWBNw1sQxZjt1Uh4samBZwM-6h6");
     var form_file = form_template_file.makeCopy(form_folder);
 
     var form = FormApp.openById(form_file.getId());
@@ -242,7 +229,6 @@ function generateTest(questions) {
     form.setShowLinkToRespondAgain(false);
     form.setAcceptingResponses(true);
     form.setDestination(FormApp.DestinationType.SPREADSHEET, responses_spreadsheet_id);
-    //form.setDestination(FormApp.DestinationType.SPREADSHEET, RESPONSES_SPREADSHEET_ID);
 
     questions.forEach(function (question) {
         var item = form.addMultipleChoiceItem();
@@ -270,7 +256,6 @@ function onTestFormSubmit(event) {
     Logger.log(form_url);
 
     var spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    //var spreadsheet = SpreadsheetApp.openById("1XEPXTF6wQCmeeJR0K5Z8DDLUYO4O8oAzD60Q-HyNMIo");
     var sheet = spreadsheet.getSheetByName("Log");
     var range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
     var values = range.getValues();
@@ -357,7 +342,6 @@ function onTestFormSubmit(event) {
     if (passed) {
         // Generate certificate and email it
         var copyFile = DriveApp.getFileById(certificate_template_id).makeCopy();
-        //var copyFile = DriveApp.getFileById("1LizvbFy_fE3wYSTO1UmfKKI_7hC6JvT0b7lDWz7NpGo").makeCopy();
         var copyId = copyFile.getId();
         var copyDoc = DocumentApp.openById(copyId);
         var copyBody = copyDoc.getActiveSection();
@@ -394,7 +378,6 @@ function onTestFormSubmit(event) {
         copyFile.setTrashed(true);
 
         var folder = DriveApp.getFolderById(certificate_folder_id);
-        //var folder = DriveApp.getFolderById("15PN_LPof9aZfnmHQ5liUgZAl2vnIwmTP");
 
         folder.addFile(pdf);
 
