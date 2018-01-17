@@ -341,7 +341,7 @@ function onTestFormSubmit(event) {
     sheet.getRange(row_number + 1, 12).setValue(ece_class);
     sheet.getRange(row_number + 1, 13).setValue(section);
 
-    var questions_spreadsheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
+    var questions_spreadsheet = SpreadsheetApp.openById(questions_spreadsheet_id);
 
     questions_spreadsheet.getSheets().forEach(function (sheet) {
         var range = sheet.getRange(4, 1, sheet.getLastRow(), sheet.getLastColumn());
@@ -409,6 +409,15 @@ function onTestFormSubmit(event) {
         var folder = DriveApp.getFolderById(certificate_folder_id);
 
         folder.addFile(pdf);
+
+        var parents = pdf.getParents();
+
+        while(parents.hasNext()) {
+            var parent = parents.next();
+            if(parent.getId() !== folder.getId()) {
+                parent.removeFile(pdf);
+            }
+        }
 
         pdf.setName(banner_id + "_" + last_name + "_" + date);
 
