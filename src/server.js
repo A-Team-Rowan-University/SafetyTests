@@ -70,36 +70,56 @@ function onRequestTest(event) {
         }
     });
 
-    if (open_row === null) {
-        // Generate test
-        var questions_sheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
-        var questions = parseQuestions(questions_sheet);
-        var random_questions = randomizeQuestions(questions);
-        var info = generateTest(random_questions);
-
-        open_row = info.concat([
-            "Emailed"
-        ]);
-
-        log_sheet.appendRow(open_row);
-    } else {
-        log_sheet.getRange(open_row_index + 1, 4).setValue("Emailed");
-    }
-
     Logger.log(event.response.getRespondentEmail());
 
     var person = PersonLookup.lookupPerson("Email", event.response.getRespondentEmail());
 
-    GmailApp.sendEmail(
-        event.response.getRespondentEmail(),
-        "Safety Test",
-        "Hello " + person["First Name"] + "\n"
-        + "\n"
-        + "Here is your safety test: \n" + open_row[2] + "\n"
-        + "\n"
-        + "\n"
-        + " - The ECE Gods"
-    );
+    if (person == null || person == undefined) {
+        if (open_row === null) {
+            open_row = [
+                "",
+                "",
+                "",
+                "Error: Could not find person for email: " + event.response.getRespondentEmail(),
+                event.response.getRespondentEmail(),
+            ];
+
+            log_sheet.appendRow(open_row);
+        } else {
+            log_sheet.getRange(open_row_index + 1, 4).setValue("Error: Could not find person for email: " + event.response.getRespondentEmail());
+            log_sheet.getRange(open_row_index + 1, 5).setValue(event.response.getRespondentEmail());
+        }
+    } else {
+        if (open_row === null) {
+            // Generate test
+            log_sheet.getRange(open_row_index + 1, 4).setValue("Generating");
+            var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
+            var questions = parseQuestions(questions_sheet);
+            var random_questions = randomizeQuestions(questions);
+            var info = generateTest(random_questions);
+
+            open_row = info.concat([
+                "Emailed",
+                event.response.getRespondentEmail(),
+            ]);
+
+            log_sheet.appendRow(open_row);
+        } else {
+            log_sheet.getRange(open_row_index + 1, 4).setValue("Emailed");
+            log_sheet.getRange(open_row_index + 1, 5).setValue(event.response.getRespondentEmail());
+        }
+
+        GmailApp.sendEmail(
+            event.response.getRespondentEmail(),
+            "Safety Test",
+            "Hello " + person["First Name"] + "\n"
+            + "\n"
+            + "Here is your safety test: \n" + open_row[2] + "\n"
+            + "\n"
+            + "\n"
+            + " - The ECE Gods"
+        );
+    }
 }
 
 function onGenerateTests(event) {
@@ -126,14 +146,20 @@ function onGenerateTests(event) {
 
     for (var i = 0; i < tests_to_generate; i++) {
         Logger.log("Generating test: " + i);
+        var log_row = sheet.getLastRow() + 1;
+
+        sheet.getRange(log_row, 4).setValue("Generating");
 
         var random_questions = randomizeQuestions(JSON.parse(questions));
 
         var info = generateTest(random_questions);
 
-        sheet.appendRow(info.concat([
-            "Generated",
-        ]));
+        sheet.getRange(log_row, 1).setValue(info[0]);
+        sheet.getRange(log_row, 2).setValue(info[1]);
+        sheet.getRange(log_row, 3).setValue(info[2]);
+        sheet.getRange(log_row, 4).setValue("Generated");
+
+        Logger.log("Generated");
     }
 }
 
@@ -169,7 +195,7 @@ function parseQuestions(questions_spreadsheet) {
                  *  }
                  */
 
-                Logger.log(row);
+                //Logger.log(row);
 
                 return {
                     text: row[0],
@@ -182,7 +208,7 @@ function parseQuestions(questions_spreadsheet) {
                          *  }
                          */
 
-                        Logger.log(answer + " " + index + " " + row[1] + " " + (index === row[1] - 1));
+                        //Logger.log(answer + " " + index + " " + row[1] + " " + (index === row[1] - 1));
 
                         return {
                             text: answer,
@@ -250,10 +276,10 @@ function generateTest(questions) {
 function onTestFormSubmit(event) {
     Logger.log("Submitted");
 
-    Logger.log(JSON.stringify(event));
+    //Logger.log(JSON.stringify(event));
 
     var form_url = event.range.getSheet().getFormUrl();
-    Logger.log(form_url);
+    //Logger.log(form_url);
 
     var spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
     var sheet = spreadsheet.getSheetByName("Log");
@@ -263,26 +289,26 @@ function onTestFormSubmit(event) {
     var row_number = 0;
 
     var form_id = form_url.match(/d\/([^/]+)\/viewform/)[1];
-    Logger.log(form_id);
+    //Logger.log(form_id);
 
     values.forEach(function (row, index) {
-        Logger.log(row);
-        Logger.log(typeof row[0]);
+        //Logger.log(row);
+        //Logger.log(typeof row[0]);
         if (row[0] === form_id) {
             row_number = index;
-            Logger.log("Found id");
+            //Logger.log("Found id");
         }
     });
 
-    Logger.log(row_number);
+    //Logger.log(row_number);
 
     var form_id = values[row_number][0];
 
-    Logger.log(form_id);
+    //Logger.log(form_id);
 
     var form = FormApp.openById(form_id);
-    Logger.log(JSON.stringify(form));
-    Logger.log(form);
+    //Logger.log(JSON.stringify(form));
+    //Logger.log(form);
 
     form.setAcceptingResponses(false);
 
@@ -305,12 +331,14 @@ function onTestFormSubmit(event) {
     var department = person["Department"];
 
     sheet.getRange(row_number + 1, 4).setValue("Response Received");
-    sheet.getRange(row_number + 1, 5).setValue(timestamp);
-    sheet.getRange(row_number + 1, 6).setValue(email);
-    sheet.getRange(row_number + 1, 7).setValue(score);
-    sheet.getRange(row_number + 1, 8).setValue(passed);
-    sheet.getRange(row_number + 1, 9).setValue(ece_class);
-    sheet.getRange(row_number + 1, 10).setValue(section);
+    sheet.getRange(row_number + 1, 6).setValue(timestamp);
+    sheet.getRange(row_number + 1, 7).setValue(email);
+    sheet.getRange(row_number + 1, 8).setValue(first_name);
+    sheet.getRange(row_number + 1, 9).setValue(last_name);
+    sheet.getRange(row_number + 1, 10).setValue(score);
+    sheet.getRange(row_number + 1, 11).setValue(passed);
+    sheet.getRange(row_number + 1, 12).setValue(ece_class);
+    sheet.getRange(row_number + 1, 13).setValue(section);
 
     var questions_spreadsheet = SpreadsheetApp.openById(QUESTIONS_SPREADSHEET_ID);
 
@@ -330,7 +358,7 @@ function onTestFormSubmit(event) {
             for (current_question in response_values) {
                 if (current_question === row_question) {
                     total_count_range.setValue(total_count_range.getValue() + 1);
-                    Logger.log(response_values[current_question][0] + " " + correct_answer);
+                    //Logger.log(response_values[current_question][0] + " " + correct_answer);
                     if (response_values[current_question][0] === correct_answer) {
                         correct_count_range.setValue(correct_count_range.getValue() + 1);
                     }
