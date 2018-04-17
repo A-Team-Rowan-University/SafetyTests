@@ -4,7 +4,7 @@ var properties = PropertiesService.getScriptProperties();
 function get_property(key) {
     value = properties.getProperty(key);
 
-    if (value == null || questions_spreadsheet_id == "") {
+    if (value == null || value == "") {
         Logger.log("Warning: Properties have not been set up or are empty");
         Logger.log("Plase run the setupProperties function and fill in all the properties");
     }
@@ -12,25 +12,19 @@ function get_property(key) {
     return value;
 }
 
-var questions_spreadsheet_id = get_property("Questions spreadsheet ID");
-var test_template_form_id    = get_property("Test template form ID");
-var test_folder_id           = get_property("Test folder ID");
-var responses_spreadsheet_id = get_property("Responses spreadsheet ID");
-var log_spreadsheet_id       = get_property("Log spreadsheet ID");
-var test_generate_form_id    = get_property("Test generate form ID");
-var test_request_form_id     = get_property("Test request form ID");
-var certificate_template_id  = get_property("Certificate template ID");
-var certificate_folder_id    = get_property("Certificate folder ID");
+var registration_spreadsheet_id = get_property("Class registration spreadsheet ID");
+var registration_form_id        = get_property("Registration form ID");
+var email_tests_form_id         = get_property("Email tests form ID");
+var questions_spreadsheet_id    = get_property("Questions spreadsheet ID");
+var certificate_template_id     = get_property("Certificate template ID");
+var certificate_folder_id       = get_property("Certificate folder ID");
 
 function setupProperties() {
     properties.setProperties({
+        "Class registration spreadsheet ID": "",
+        "Registration form ID": "",
+        "Email tests form ID": "",
         "Questions spreadsheet ID": "",
-        "Test template form ID": "",
-        "Test folder ID": "",
-        "Responses spreadsheet ID": "",
-        "Log spreadsheet ID": "",
-        "Test generate form ID": "",
-        "Test request form ID": "",
         "Certificate template ID": "",
         "Certificate folder ID": "",
     }, true);
