@@ -30,19 +30,100 @@ function setupProperties() {
     }, true);
 }
 
-function setupGenerateTests() {
-    var test_generate_form = FormApp.openById(test_generate_form_id);
-    ScriptApp.newTrigger("onGenerateTests").forForm(test_generate_form).onFormSubmit().create();
+function setupRegistrationForm() {
+    var registration_form = FormApp.openById(registration_form_id);
+    ScriptApp.newTrigger("onRegister").forForm(registration_form).onFormSubmit().create();
 }
 
-function setupResponseTests() {
-    var test_response_spreadsheet = SpreadsheetApp.openById(responses_spreadsheet_id);
-    ScriptApp.newTrigger("onTestFormSubmit").forSpreadsheet(test_response_spreadsheet).onFormSubmit().create();
+function setupEmailTestsForm() {
+    var email_tests_form = FormApp.openById(email_tests_form_id);
+    ScriptApp.newTrigger("onEmailTests").forForm(email_tests_form).onFormSubmit().create();
 }
 
-function setupRequestTests() {
-    var test_request_form = FormApp.openById(test_request_form_id);
-    ScriptApp.newTrigger("onRequestTest").forForm(test_request_form).onFormSubmit().create();
+function onRegister(event) {
+    var form_items = event.response.getItemResponses();
+
+    var form_info = form_items.reduce(function (info, item_response) {
+
+        var item = item_response.getItem();
+        var title = item.getTitle();
+
+        if (title === "Class code") {
+            var response = item_response.getResponse();
+            info.class_code = response;
+        }
+
+        return info;
+
+    }, {class_code: ""});
+
+    var email = event.response.getRespondentEmail();
+
+    var person = PersonLookup.lookupPerson("Email", email)
+
+    var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
+    var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
+
+    registration_sheet.appendRow([
+        new Date(),
+        email,
+        (person != null && person != undefined) ? person['First Name'] : "Not Found",
+        (person != null && person != undefined) ? person['Last Name'] : "Not Found",
+        (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
+
+    ]);
+}
+
+function onEmailTests(event) {
+    // Get class code from form
+    // For each person:
+    //   look up name, id
+    //   Generate unique url
+    //   Send email
+
+    var form_items = event.response.getItemResponses();
+
+    var form_info = form_items.reduce(function (info, item_response) {
+
+        var item = item_response.getItem();
+        var title = item.getTitle();
+
+        if (title === "Class code") {
+            var response = item_response.getResponse();
+            info.class_code = response;
+        }
+
+        return info;
+
+    }, {class_code: ""});
+
+    Logger.log(JSON.stringify(form_info));
+
+    var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
+    var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
+
+    var student_rows = registration_sheet.getDataRange().getValues().slice(3);
+
+    Logger.log(JSON.stringify(student_rows));
+
+    student_rows.forEach(function (student, index) {
+
+        var email = student[1];
+
+        registration_sheet.getRange(4 + index, 6).setValue(new Date());
+
+        var url = "https://<url-not-known>?code=" + info.class_code + "?id=" + index;
+
+        GmailApp.sendEmail(
+            email,
+            "ECE Safety Test",
+            "Take your safety test here: " + url
+        );
+    });
+}
+
+function doGet(event) {
+
 }
 
 function onRequestTest(event) {
