@@ -1,6 +1,5 @@
 <script>
  
-
 function onQuestionsLoad(questions) {
 
     console.log(questions);
@@ -41,6 +40,13 @@ function onQuestionsLoad(questions) {
 
     var questions_list_element = document.getElementById("questions");
     questions_list_element.appendChild(questions_list.element);
+
+
+    var submit_button = document.getElementById("submit_button");
+
+    submit_button.onclick = function(event) {
+        console.log(questions_list.getAnswers());
+    }
 
 }
 

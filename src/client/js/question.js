@@ -14,17 +14,36 @@ function QuestionList(question_list) {
 
         var question_obj = new Question(question);
 
-        questions.append(question_obj);
+        questions.push(question_obj);
         self.element.appendChild(question_obj.element);
     }
 
     self.getAnswers = function() {
-        
+        var question_responses = [];
+
+        console.log(questions);
+
+        console.log(questions[0].getAnswer())
+
+        for (var i = 0; i < questions.length; i++) {
+            var question_obj = questions[i];
+            var question_response = question_obj.getAnswer();
+
+            var question = question_obj.question;
+
+            question.response = question_response;
+
+            question_responses.push(question)
+        }
+
+        return question_responses;
     }
 }
 
 function Question(question) {
     var self = this;
+
+    self.question = question;
 
     self.element = document.createElement("div");
 
@@ -62,7 +81,21 @@ function Question(question) {
     }
 
     self.getAnswer = function() {
-        
+        var answer = null;
+
+        var radios = self.element.querySelectorAll("input[name=\"" + question.category + ":" + question.id + "\"]");
+        console.log(radios);
+
+        for (var i = 0; i < radios.length; i++) {
+            answer_radio = radios[i];
+
+            if (answer_radio.checked) {
+                answer = answer_radio.value;
+                break;
+            }
+        }
+
+        return answer;
     }
 }
 
