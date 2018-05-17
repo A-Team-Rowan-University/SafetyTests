@@ -108,27 +108,21 @@ function onEmailTests(event) {
 
     student_rows.forEach(function (student, index) {
 
-        var email = student[1];
+        if (student[5] == "") {
 
-        registration_sheet.getRange(4 + index, 6).setValue(new Date());
+            var email = student[1];
 
-        var url = "https://<url-not-known>?code=" + info.class_code + "?id=" + index;
+            registration_sheet.getRange(4 + index, 6).setValue(new Date());
 
-        GmailApp.sendEmail(
-            email,
-            "ECE Safety Test",
-            "Take your safety test here: " + url
-        );
+            var url = "https://script.google.com/a/students.rowan.edu/macros/s/AKfycbwa831Ouqu70OtgMsSLwX7Vmc8k3NPGHfTyKdJlpOEY/dev?class_code=" + form_info.class_code + "&id=" + index;
+
+            GmailApp.sendEmail(
+                email,
+                "ECE Safety Test",
+                "Take your safety test here: " + url
+            );
+        }
     });
-}
-
-function doGet(event) {
-    return HtmlService.createTemplateFromFile('index.html').evaluate();
-}
-
-function include(filename) {
-    return HtmlService.createHtmlOutputFromFile(filename)
-        .getContent();
 }
 
 function onRequestTest(event) {
@@ -243,7 +237,6 @@ function onGenerateTests(event) {
     }
 }
 
-
 function parseQuestions(questions_spreadsheet) {
     var questions_spreadsheet_header_rows = 3;
     var questions_desired_locaion = 'B2';
@@ -266,7 +259,7 @@ function parseQuestions(questions_spreadsheet) {
         return {
             name: sheet.getName(),
             desired_questions: sheet.getRange(questions_desired_locaion).getValue(),
-            questions: values.map(function (row) {
+            questions: values.map(function (row, index) {
 
                 /*
                  *  {
@@ -279,6 +272,8 @@ function parseQuestions(questions_spreadsheet) {
 
                 return {
                     text: row[0],
+                    id: index,
+                    category: sheet.getName(),
                     answers: row.slice(2, 6).map(function (answer, index) {
 
                         /*
@@ -292,7 +287,7 @@ function parseQuestions(questions_spreadsheet) {
 
                         return {
                             text: answer,
-                            correct: index === row[1] - 1
+                            id: index,
                         };
                     })
                 };
@@ -307,6 +302,7 @@ function randomizeQuestions(questions) {
 
         // Shuffle the answers of the questions
         category.questions.forEach(function (question) {
+            //question.category = category.name;
             shuffleArray(question.answers);
         });
 
@@ -527,6 +523,72 @@ function shuffleArray(array) {
         array[i] = array[j];
         array[j] = temp;
     }
+    return array;
+}
+
+function doGet(event) {
+    Logger.log(JSON.stringify(event.parameter));
+
+    var id = event.parameter.id;
+    var class_code = event.parameter.class_code;
+
+    if (id == undefined || id == null || class_code == undefined || id == null) {
+        return HtmlService.createHtmlOutput("<p>Invalid Link</p>")
+    }
+
+    var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
+    var registration_sheet = registration_spreadsheet.getSheetByName(class_code);
+
+    var row_number = parseInt(id) + 4;
+
+    if (registration_sheet == undefined || registration_sheet == null || row_number == NaN || row_number == null || row_number == undefined) {
+        return HtmlService.createHtmlOutput("<p>Invalid Link</p>")
+    }
+
+    var registration_range = registration_sheet.getRange(row_number, 1, 1, registration_sheet.getLastColumn());
+    var registration_row = registration_range.getValues()[0];
+
+    Logger.log(JSON.stringify(registration_row));
+
+    var emailed = registration_row[5];
+    var clicked_link = registration_row[6];
+
+    if (emailed == "" || emailed == null || emailed == undefined) {
+        return HtmlService.createHtmlOutput("<p>Invalid Link</p>")
+    }
+
+    if (clicked_link != "") {
+        return HtmlService.createHtmlOutput("<p>This test has already been taken</p>"
+            // + "<pre>" +
+            //clicked_link + "\n" +
+            //row_number + "\n" +
+            //JSON.stringify(registration_row) +
+            //"</pre>"
+        );
+    }
+
+    registration_sheet.getRange(row_number, 7).setValue(new Date());
+
+    return HtmlService.createTemplateFromFile('index.html').evaluate();
+}
+
+function getQuestions() {
+    var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
+    var questions = parseQuestions(questions_sheet);
+    var random_questions = randomizeQuestions(questions);
+
+    random_questions.map(function (question) {
+        question.answers.map(function (answer) {
+            answer.correct = undefined;
+        });
+    });
+
+    return random_questions;
+}
+
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename)
+        .getContent();
 }
 
 function tests() {
