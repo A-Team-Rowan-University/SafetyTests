@@ -287,7 +287,7 @@ function parseQuestions(questions_spreadsheet) {
 
                         return {
                             text: answer,
-                            id: index,
+                            id: index + 1,
                         };
                     })
                 };
@@ -349,99 +349,78 @@ function generateTest(questions) {
     ];
 }
 
-function onTestFormSubmit(event) {
+function submitTest(responses) {
     Logger.log("Submitted");
 
-    //Logger.log(JSON.stringify(event));
+    Logger.log(JSON.stringify(responses));
 
-    var form_url = event.range.getSheet().getFormUrl();
-    //Logger.log(form_url);
-
-    var spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    var sheet = spreadsheet.getSheetByName("Log");
-    var range = sheet.getRange(1, 1, sheet.getLastRow(), sheet.getLastColumn());
-    var values = range.getValues();
-
-    var row_number = 0;
-
-    var form_id = form_url.match(/d\/([^/]+)\/viewform/)[1];
-    //Logger.log(form_id);
-
-    values.forEach(function (row, index) {
-        //Logger.log(row);
-        //Logger.log(typeof row[0]);
-        if (row[0] === form_id) {
-            row_number = index;
-            //Logger.log("Found id");
-        }
-    });
-
-    //Logger.log(row_number);
-
-    var form_id = values[row_number][0];
-
-    //Logger.log(form_id);
-
-    var form = FormApp.openById(form_id);
-    //Logger.log(JSON.stringify(form));
-    //Logger.log(form);
-
-    form.setAcceptingResponses(false);
-
-    var response_values = event.namedValues;
-
-    var string_score = response_values['Score'][0];
-    var points = string_score.split(" / ");
-    var score = points[0] / points[1];
-    var passed = score >= 0.8;
-
-    var timestamp = response_values['Timestamp'][0];
-    var email = response_values['Email Address'][0];
-    var ece_class = response_values['Class'][0];
-    var section = response_values['Section'][0];
-
-    var person = PersonLookup.lookupPerson("Email", email);
-    var first_name = person["First Name"];
-    var last_name = person["Last Name"];
-    var banner_id = person["Banner ID"];
-    var department = person["Department"];
-
-    sheet.getRange(row_number + 1, 4).setValue("Response Received");
-    sheet.getRange(row_number + 1, 6).setValue(timestamp);
-    sheet.getRange(row_number + 1, 7).setValue(email);
-    sheet.getRange(row_number + 1, 8).setValue(first_name);
-    sheet.getRange(row_number + 1, 9).setValue(last_name);
-    sheet.getRange(row_number + 1, 10).setValue(score);
-    sheet.getRange(row_number + 1, 11).setValue(passed);
-    sheet.getRange(row_number + 1, 12).setValue(ece_class);
-    sheet.getRange(row_number + 1, 13).setValue(section);
+    var id = parseInt(responses.id);
+    var class_code = responses.class_code;
+    var questions = responses.answers;
 
     var questions_spreadsheet = SpreadsheetApp.openById(questions_spreadsheet_id);
 
-    questions_spreadsheet.getSheets().forEach(function (sheet) {
-        var range = sheet.getRange(4, 1, sheet.getLastRow(), sheet.getLastColumn());
-        var values = range.getValues();
+    var total_questions = 0;
+    var correct_questions = 0;
 
-        values.forEach(function (row, index) {
-            // Go over each question to see if this is the one
-            var row_question = row[0];
-            var correct_number = row[1];
-            var correct_answer = row[1 + correct_number];
+    Logger.log(id);
+    Logger.log(class_code);
+    Logger.log(questions);
 
-            var total_count_range = sheet.getRange(index + 4, 8);
-            var correct_count_range = sheet.getRange(index + 4, 7);
+    questions.forEach(function (question) {
+        var category = question.category;
+        var id = question.id;
+        var response = question.response;
 
-            for (current_question in response_values) {
-                if (current_question === row_question) {
-                    total_count_range.setValue(total_count_range.getValue() + 1);
-                    //Logger.log(response_values[current_question][0] + " " + correct_answer);
-                    if (response_values[current_question][0] === correct_answer) {
-                        correct_count_range.setValue(correct_count_range.getValue() + 1);
-                    }
-                }
-            }
-        });
+        Logger.log(category);
+        Logger.log(id);
+        Logger.log(response);
+
+        var questions_sheet = questions_spreadsheet.getSheetByName(category);
+
+        var correct_response = questions_sheet.getRange(4 + id, 2).getValue();
+
+        Logger.log(correct_response);
+
+        question.correct_response = correct_response;
+
+        var total_count_range = questions_sheet.getRange(4 + id, 8);
+        var correct_count_range = questions_sheet.getRange(4 + id, 7);
+
+        Logger.log(total_count_range);
+        Logger.log(correct_count_range);
+
+        total_questions += 1;
+        total_count_range.setValue(total_count_range.getValue() + 1);
+
+        if (response == correct_response) {
+            Logger.log("Correct");
+            correct_questions += 1;
+            correct_count_range.setValue(correct_count_range.getValue() + 1);
+            question.correct = true;
+        } else {
+            Logger.log("Not correct");
+            question.correct = false;
+        }
     });
+
+    var response_json = JSON.stringify(responses);
+    var score = correct_questions / total_questions;
+    var passed = score >= 0.8;
+
+    Logger.log(response_json);
+    Logger.log(score);
+    Logger.log(passed);
+
+    var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
+    var registration_sheet = registration_spreadsheet.getSheetByName(class_code);
+
+    Logger.log(id);
+
+    registration_sheet.getRange(id + 4, 8).setValue(new Date())
+    registration_sheet.getRange(id + 4, 9).setValue(score)
+    registration_sheet.getRange(id + 4, 10).setValue(passed)
+    registration_sheet.getRange(id + 4, 11).setValue(response_json)
 
     if (passed) {
         // Generate certificate and email it
@@ -465,13 +444,13 @@ function onTestFormSubmit(event) {
 
         var date = mm + '/' + dd + '/' + yyyy;
 
-        copyBody.replaceText('<<FirstName>>', first_name);
-        copyBody.replaceText('<<LastName>>', last_name);
-        copyBody.replaceText('<<BannerID>>', banner_id);
-        copyBody.replaceText('<<Email>>', email);
-        copyBody.replaceText('<<Department>>', department);
-        copyBody.replaceText('<<ClassCode>>', ece_class);
-        copyBody.replaceText('<<Section>>', section);
+        //copyBody.replaceText('<<FirstName>>', first_name);
+        //copyBody.replaceText('<<LastName>>', last_name);
+        //copyBody.replaceText('<<BannerID>>', banner_id);
+        //copyBody.replaceText('<<Email>>', email);
+        //copyBody.replaceText('<<Department>>', department);
+        //copyBody.replaceText('<<ClassCode>>', ece_class);
+        //copyBody.replaceText('<<Section>>', section);
         copyBody.replaceText('<<CompletionDate>>', date);
         copyBody.replaceText('<<CalculatedScore>>', score*100);
 
@@ -511,11 +490,7 @@ function onTestFormSubmit(event) {
     }
 }
 
-/**
- * Randomize array element order in-place.
- * Using Durstenfeld shuffle algorithm.
- * https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
- */
+
 function shuffleArray(array) {
     for (var i = array.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
@@ -569,7 +544,13 @@ function doGet(event) {
 
     registration_sheet.getRange(row_number, 7).setValue(new Date());
 
-    return HtmlService.createTemplateFromFile('index.html').evaluate();
+    var t = HtmlService.createTemplateFromFile('index.html');
+
+    t.id = id;
+    t.class_code = class_code;
+
+    var e = t.evaluate();
+    return e;
 }
 
 function getQuestions() {

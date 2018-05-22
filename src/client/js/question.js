@@ -21,10 +21,6 @@ function QuestionList(question_list) {
     self.getAnswers = function() {
         var question_responses = [];
 
-        console.log(questions);
-
-        console.log(questions[0].getAnswer())
-
         for (var i = 0; i < questions.length; i++) {
             var question_obj = questions[i];
             var question_response = question_obj.getAnswer();
@@ -84,8 +80,6 @@ function Question(question) {
         var answer = null;
 
         var radios = self.element.querySelectorAll("input[name=\"" + question.category + ":" + question.id + "\"]");
-        console.log(radios);
-
         for (var i = 0; i < radios.length; i++) {
             answer_radio = radios[i];
 
