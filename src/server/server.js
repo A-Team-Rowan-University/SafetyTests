@@ -422,8 +422,18 @@ function submitTest(responses) {
     registration_sheet.getRange(id + 4, 10).setValue(passed)
     registration_sheet.getRange(id + 4, 11).setValue(response_json)
 
+    var student_data = registration_sheet.getRange(id+4, 1, 1, 7).getValues()[0];
+
+    Logger.log(JSON.stringify(student_data));
+
+    var email = student_data[1];
+    var first_name = student_data[2];
+    var last_name = student_data[3];
+    var banner_id = student_data[4];
+
     if (passed) {
         // Generate certificate and email it
+        Logger.log("passed, generating certificate");
         var copyFile = DriveApp.getFileById(certificate_template_id).makeCopy();
         var copyId = copyFile.getId();
         var copyDoc = DocumentApp.openById(copyId);
@@ -444,20 +454,26 @@ function submitTest(responses) {
 
         var date = mm + '/' + dd + '/' + yyyy;
 
-        //copyBody.replaceText('<<FirstName>>', first_name);
-        //copyBody.replaceText('<<LastName>>', last_name);
-        //copyBody.replaceText('<<BannerID>>', banner_id);
-        //copyBody.replaceText('<<Email>>', email);
+        Logger.log("replacing text");
+
+        copyBody.replaceText('<<FirstName>>', first_name);
+        copyBody.replaceText('<<LastName>>', last_name);
+        copyBody.replaceText('<<BannerID>>', banner_id);
+        copyBody.replaceText('<<Email>>', email);
         //copyBody.replaceText('<<Department>>', department);
         //copyBody.replaceText('<<ClassCode>>', ece_class);
         //copyBody.replaceText('<<Section>>', section);
         copyBody.replaceText('<<CompletionDate>>', date);
         copyBody.replaceText('<<CalculatedScore>>', score*100);
 
+        Logger.log("saving cerificate");
+
         copyDoc.saveAndClose();
 
+        Logger.log("generating pdf");
         var pdf = DriveApp.createFile(copyFile.getAs('application/pdf'));
 
+        Logger.log("removing non-pdf");
         copyFile.setTrashed(true);
 
         var folder = DriveApp.getFolderById(certificate_folder_id);
@@ -475,6 +491,8 @@ function submitTest(responses) {
 
         pdf.setName(banner_id + "_" + last_name + "_" + date);
 
+        Logger.log("sending email");
+        Logger.log("email: " + email);
         GmailApp.sendEmail(
             email,
             "ECE Safety Training Certificate",
@@ -483,10 +501,24 @@ function submitTest(responses) {
             "Attatched is your safety training certificate\n" +
             "\n" +
             "\n" +
-            " - The ECE Gods",
+            " - The ECE Depeartment",
             {attachments: [pdf]}
         );
-
+    } else {
+        Logger.log("failed, not generating certificate");
+        Logger.log("email: " + email);
+        GmailApp.sendEmail(
+            email,
+            "ECE Safety Test",
+            "Hello " + first_name + ",\n" +
+            "\n" +
+            "We regret to inform you that you have failed your ECE safety test\n" +
+            "You have achieved a score of " + score*100.0 + "%.\n" +
+            "A score of 80% or above is considered passing.\n" +
+            "\n" +
+            " - The ECE Department"
+        );
+        Logger.log("sent email");
     }
 }
 
