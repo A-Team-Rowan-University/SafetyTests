@@ -73,10 +73,7 @@ function onRegister(event) {
         if (last_row > 3) {
             var email_column = registration_sheet.getRange(4, 2, last_row-3, 1).getValues();
 
-            var email_found = email_column.some(function (current_email) {
-                Logger.log(current_email);
-                return current_email == email
-            });
+            var email_found = email_column.some(function (current_email) { return current_email == email });
         }
 
         if (!email_found) {
