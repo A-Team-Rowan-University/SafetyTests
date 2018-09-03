@@ -65,26 +65,51 @@ function onRegister(event) {
     var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
 
     if (registration_sheet != null) {
+
+        var email_found = false;
+
+        var last_row = registration_sheet.getLastRow();
+
+        if (last_row > 3) {
+            var email_column = registration_sheet.getRange(4, 2, last_row-3, 1).getValues();
+
+            var email_found = email_column.some(function (current_email) {
+                Logger.log(current_email);
+                return current_email == email
+            });
+        }
+
+        if (!email_found) {
             GmailApp.sendEmail(
                 email,
                 "Safety Test Registration Success",
-                "You have beed registered to take the safety test\n" +
+                "You have been registered to take the safety test\n" +
                 "Your instructor will send an email with a link to your test"
             );
-        registration_sheet.appendRow([
-            new Date(),
-            email,
-            (person != null && person != undefined) ? person['First Name'] : "Not Found",
-            (person != null && person != undefined) ? person['Last Name'] : "Not Found",
-            (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
+            registration_sheet.appendRow([
+                new Date(),
+                email,
+                (person != null && person != undefined) ? person['First Name'] : "Not Found",
+                (person != null && person != undefined) ? person['Last Name'] : "Not Found",
+                (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
 
-        ]);
+            ]);
+        } else {
+            GmailApp.sendEmail (
+                email,
+                "Safety Test Registration Failure",
+                "Your attempt to register for a safety test has failed\n" +
+                "This could be due to entering an incorrect class code, " +
+                "the class not being available now, or registering twice for the same test"
+            );
+        }
     } else {
         GmailApp.sendEmail (
             email,
             "Safety Test Registration Failure",
-            "Your attempt to register for a safet test has failed\n" +
-            "This could be due to entering an incorrect class code or the class not being available now"
+            "Your attempt to register for a safety test has failed\n" +
+            "This could be due to entering an incorrect class code, " +
+            "the class not being available now, or registering twice for the same test"
         );
     }
 
@@ -139,118 +164,6 @@ function onEmailTests(event) {
             );
         }
     });
-}
-
-function onRequestTest(event) {
-    var log_spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    var log_sheet = log_spreadsheet.getSheetByName("Log");
-    var log_range = log_sheet.getRange(1, 1, log_sheet.getLastRow(), log_sheet.getLastRow());
-    var log_values = log_range.getValues();
-
-    var open_row = null;
-    var open_row_index = 0;
-
-    log_values.some(function (row, index) {
-        if (row[3] === "Generated") {
-            open_row = row;
-            open_row_index = index;
-            return true;
-        } else {
-            return false;
-        }
-    });
-
-    Logger.log(event.response.getRespondentEmail());
-
-    var person = PersonLookup.lookupPerson("Email", event.response.getRespondentEmail());
-
-    if (person == null || person == undefined) {
-        if (open_row === null) {
-            open_row = [
-                "",
-                "",
-                "",
-                "Error: Could not find person for email: " + event.response.getRespondentEmail(),
-                event.response.getRespondentEmail(),
-            ];
-
-            log_sheet.appendRow(open_row);
-        } else {
-            log_sheet.getRange(open_row_index + 1, 4).setValue("Error: Could not find person for email: " + event.response.getRespondentEmail());
-            log_sheet.getRange(open_row_index + 1, 5).setValue(event.response.getRespondentEmail());
-        }
-    } else {
-        if (open_row === null) {
-            // Generate test
-            log_sheet.getRange(open_row_index + 1, 4).setValue("Generating");
-            var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
-            var questions = parseQuestions(questions_sheet);
-            var random_questions = randomizeQuestions(questions);
-            var info = generateTest(random_questions);
-
-            open_row = info.concat([
-                "Emailed",
-                event.response.getRespondentEmail(),
-            ]);
-
-            log_sheet.appendRow(open_row);
-        } else {
-            log_sheet.getRange(open_row_index + 1, 4).setValue("Emailed");
-            log_sheet.getRange(open_row_index + 1, 5).setValue(event.response.getRespondentEmail());
-        }
-
-        GmailApp.sendEmail(
-            event.response.getRespondentEmail(),
-            "Safety Test",
-            "Hello " + person["First Name"] + "\n"
-            + "\n"
-            + "Here is your safety test: \n" + open_row[2] + "\n"
-            + "\n"
-            + "\n"
-            + " - The ECE Gods"
-        );
-    }
-}
-
-function onGenerateTests(event) {
-
-    var responses = event.response.getItemResponses();
-
-    var tests_to_generate = 0;
-
-    responses.forEach(function (response) {
-        if (response.getItem().getTitle() === "Tests to generate") {
-            tests_to_generate = response.getResponse();
-        }
-    });
-
-    Logger.log("Generating tests: " + tests_to_generate);
-
-    var spreadsheet = SpreadsheetApp.openById(log_spreadsheet_id);
-    var sheet = spreadsheet.getSheetByName("Log");
-
-    var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
-
-    // Make into JSON so that eash test uses a deep clone of the questions array
-    var questions = JSON.stringify(parseQuestions(questions_sheet));
-
-    for (var i = 0; i < tests_to_generate; i++) {
-        Logger.log("Generating test: " + i);
-        var log_row = sheet.getLastRow() + 1;
-
-        sheet.getRange(log_row, 4).setValue("Generating");
-
-        var random_questions = randomizeQuestions(JSON.parse(questions));
-
-        var info = generateTest(random_questions);
-
-        sheet.getRange(log_row, 1).setValue(info[0]);
-        sheet.getRange(log_row, 2).setValue(info[1]);
-        sheet.getRange(log_row, 3).setValue(info[2]);
-        sheet.getRange(log_row, 4).setValue("Generated");
-
-        Logger.log("Generated");
-    }
 }
 
 function parseQuestions(questions_spreadsheet) {
