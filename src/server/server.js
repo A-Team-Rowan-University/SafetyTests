@@ -64,14 +64,30 @@ function onRegister(event) {
     var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
     var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
 
-    registration_sheet.appendRow([
-        new Date(),
-        email,
-        (person != null && person != undefined) ? person['First Name'] : "Not Found",
-        (person != null && person != undefined) ? person['Last Name'] : "Not Found",
-        (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
+    if (registration_sheet != null) {
+            GmailApp.sendEmail(
+                email,
+                "Safety Test Registration Success",
+                "You have beed registered to take the safety test\n" +
+                "Your instructor will send an email with a link to your test"
+            );
+        registration_sheet.appendRow([
+            new Date(),
+            email,
+            (person != null && person != undefined) ? person['First Name'] : "Not Found",
+            (person != null && person != undefined) ? person['Last Name'] : "Not Found",
+            (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
 
-    ]);
+        ]);
+    } else {
+        GmailApp.sendEmail (
+            email,
+            "Safety Test Registration Failure",
+            "Your attempt to register for a safet test has failed\n" +
+            "This could be due to entering an incorrect class code or the class not being available now"
+        );
+    }
+
 }
 
 function onEmailTests(event) {
