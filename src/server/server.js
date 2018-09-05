@@ -41,6 +41,17 @@ function setupEmailTestsForm() {
 }
 
 function onRegister(event) {
+
+    function failure_email(email) {
+        GmailApp.sendEmail (
+            email,
+            "Safety Test Registration Failure",
+            "Your attempt to register for a safety test has failed\n" +
+            "This could be due to entering an incorrect class code, " +
+            "the class not being available now, or registering twice for the same test"
+        );
+    }
+
     var form_items = event.response.getItemResponses();
 
     var form_info = form_items.reduce(function (info, item_response) {
@@ -64,51 +75,49 @@ function onRegister(event) {
     var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
     var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
 
-    if (registration_sheet != null) {
-
-        var email_found = false;
-
-        var last_row = registration_sheet.getLastRow();
-
-        if (last_row > 3) {
-            var email_column = registration_sheet.getRange(4, 2, last_row-3, 1).getValues();
-
-            var email_found = email_column.some(function (current_email) { return current_email == email });
-        }
-
-        if (!email_found) {
-            GmailApp.sendEmail(
-                email,
-                "Safety Test Registration Success",
-                "You have been registered to take the safety test\n" +
-                "Your instructor will send an email with a link to your test"
-            );
-            registration_sheet.appendRow([
-                new Date(),
-                email,
-                (person != null && person != undefined) ? person['First Name'] : "Not Found",
-                (person != null && person != undefined) ? person['Last Name'] : "Not Found",
-                (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
-
-            ]);
-        } else {
-            GmailApp.sendEmail (
-                email,
-                "Safety Test Registration Failure",
-                "Your attempt to register for a safety test has failed\n" +
-                "This could be due to entering an incorrect class code, " +
-                "the class not being available now, or registering twice for the same test"
-            );
-        }
-    } else {
-        GmailApp.sendEmail (
-            email,
-            "Safety Test Registration Failure",
-            "Your attempt to register for a safety test has failed\n" +
-            "This could be due to entering an incorrect class code, " +
-            "the class not being available now, or registering twice for the same test"
-        );
+    // check that class code exists
+    if (registration_sheet == null) {
+        failure_email(email);
+        return;
     }
+
+    // check if class is enabled
+    if (!registration_sheet.getRange(2, 4).getValue()) {
+        failure_email(email);
+        return;
+    }
+
+    // check for duplicate
+    var email_found = false;
+
+    var last_row = registration_sheet.getLastRow();
+
+    if (last_row > 3) {
+        var email_column = registration_sheet.getRange(4, 2, last_row-3, 1).getValues();
+
+        var email_found = email_column.some(function (current_email) { return current_email == email });
+    }
+
+    if (email_found) {
+        failure_email(email);
+        return;
+    }
+
+    // SUCCESS!
+    GmailApp.sendEmail(
+        email,
+        "Safety Test Registration Success",
+        "You have been registered to take the safety test\n" +
+        "Your instructor will send an email with a link to your test"
+    );
+    registration_sheet.appendRow([
+        new Date(),
+        email,
+        (person != null && person != undefined) ? person['First Name'] : "Not Found",
+        (person != null && person != undefined) ? person['Last Name'] : "Not Found",
+        (person != null && person != undefined) ? person['Banner ID'] : "Not Found",
+
+    ]);
 
 }
 
