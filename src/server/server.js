@@ -252,38 +252,6 @@ function randomizeQuestions(questions) {
     return randomized_questions;
 }
 
-function generateTest(questions) {
-
-    var form_template_file = DriveApp.getFileById(test_template_form_id);
-    var form_folder = DriveApp.getFolderById(test_folder_id);
-    var form_file = form_template_file.makeCopy(form_folder);
-
-    var form = FormApp.openById(form_file.getId());
-
-    form.setIsQuiz(true);
-    form.setLimitOneResponsePerUser(true);
-    form.setRequireLogin(true);
-    form.setShowLinkToRespondAgain(false);
-    form.setAcceptingResponses(true);
-    form.setDestination(FormApp.DestinationType.SPREADSHEET, responses_spreadsheet_id);
-
-    questions.forEach(function (question) {
-        var item = form.addMultipleChoiceItem();
-        item.setRequired(true);
-        item.setPoints(1);
-        item.setTitle(question.text);
-        item.setChoices(question.answers.map(function (answer) {
-            return item.createChoice(answer.text, answer.correct);
-        }));
-    });
-
-    return [
-        form.getId(),
-        form.getEditUrl(),
-        form.getPublishedUrl(),
-    ];
-}
-
 function submitTest(responses) {
     Logger.log("Submitted");
 
@@ -547,7 +515,5 @@ function tests() {
 
     var random_questions = randomizeQuestions(questions);
     Logger.log(JSON.stringify(random_questions, null, 2));
-
-    generateTest("Testy Testing", random_questions);
 }
 
