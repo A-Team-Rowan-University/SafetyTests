@@ -4,6 +4,8 @@ var test_element = document.getElementById("test");
 var questions_list_element = document.getElementById("questions");
 var submit_button = document.getElementById("submit_button");
 
+console.log(config_name);
+
 function onQuestionsLoad(questions) {
 
     var questions_list = new QuestionList(questions);
@@ -23,5 +25,5 @@ function onQuestionsLoad(questions) {
     }
 }
 
-google.script.run.withSuccessHandler(onQuestionsLoad).getQuestions();
+google.script.run.withSuccessHandler(onQuestionsLoad).getQuestions(config_name);
 

@@ -18,6 +18,7 @@ var email_tests_form_id         = get_property("Email tests form ID");
 var questions_spreadsheet_id    = get_property("Questions spreadsheet ID");
 var certificate_template_id     = get_property("Certificate template ID");
 var certificate_folder_id       = get_property("Certificate folder ID");
+var config_spreadsheet_id       = get_property("Config spreadsheet ID");
 
 function setupProperties() {
     properties.setProperties({
@@ -231,20 +232,48 @@ function parseQuestions(questions_spreadsheet) {
     });
 }
 
-function randomizeQuestions(questions) {
+function parseConfig(config_sheet) {
+    Logger.log("Parsing config");
+    Logger.log(config_sheet);
+    var config_range = config_sheet.getRange(4, 1, config_sheet.getLastRow()-3, 2);
+    Logger.log("Got range!");
+    Logger.log(config_range);
+    var config_values = config_range.getValues();
+
+    Logger.log(JSON.stringify(config_values));
+
+    var config = config_values.reduce(
+        function (config, question) {
+            config[question[0]] = question[1];
+            return config;
+        }, {}
+    );
+
+    Logger.log(JSON.stringify(config));
+
+    return config;
+}
+
+function randomizeQuestions(questions, config) {
+    Logger.log("randomizing questions");
+    Logger.log(JSON.stringify(config));
     var randomized_questions = questions.reduce(function (randomized_questions, category) {
 
+        if (category.name in config) {
+            // Shuffle the answers of the questions
+            category.questions.forEach(function (question) {
+                //question.category = category.name;
+                shuffleArray(question.answers);
+            });
 
-        // Shuffle the answers of the questions
-        category.questions.forEach(function (question) {
-            //question.category = category.name;
-            shuffleArray(question.answers);
-        });
+            shuffleArray(category.questions);
 
-        shuffleArray(category.questions);
+            var category_questions = category.questions.splice(0, config[category.name]);
 
-        return randomized_questions.concat(category.questions.splice(0, category.desired_questions));
-
+            return randomized_questions.concat(category_questions);
+        } else {
+            return randomized_questions;
+        }
     }, []);
 
     shuffleArray(randomized_questions);
@@ -425,7 +454,6 @@ function submitTest(responses) {
     }
 }
 
-
 function shuffleArray(array) {
     for (var i = array.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
@@ -448,6 +476,9 @@ function doGet(event) {
 
     var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
     var registration_sheet = registration_spreadsheet.getSheetByName(class_code);
+
+    var config_name = registration_sheet.getRange(2, 6).getValue();
+    Logger.log("config name: " + config_name);
 
     var row_number = parseInt(id) + 4;
 
@@ -483,15 +514,23 @@ function doGet(event) {
 
     t.id = id;
     t.class_code = class_code;
+    t.config_name = config_name;
 
     var e = t.evaluate();
     return e;
 }
 
-function getQuestions() {
+function getQuestions(config_name) {
     var questions_sheet = SpreadsheetApp.openById(questions_spreadsheet_id);
     var questions = parseQuestions(questions_sheet);
-    var random_questions = randomizeQuestions(questions);
+
+    Logger.log("Getting questions, config: " + config_name);
+
+    var config_sheet = SpreadsheetApp.openById(config_spreadsheet_id).getSheetByName(config_name);
+    var config = parseConfig(config_sheet);
+    Logger.log(JSON.stringify(config));
+
+    var random_questions = randomizeQuestions(questions, config);
 
     random_questions.map(function (question) {
         question.answers.map(function (answer) {
