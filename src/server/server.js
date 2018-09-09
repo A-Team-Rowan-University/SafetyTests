@@ -162,7 +162,8 @@ function onEmailTests(event) {
 
             registration_sheet.getRange(4 + index, 6).setValue(new Date());
 
-            var url = "https://script.google.com/a/students.rowan.edu/macros/s/AKfycbwa831Ouqu70OtgMsSLwX7Vmc8k3NPGHfTyKdJlpOEY/dev?class_code=" + form_info.class_code + "&id=" + index;
+            //var url = "https://script.google.com/a/students.rowan.edu/macros/s/AKfycbwa831Ouqu70OtgMsSLwX7Vmc8k3NPGHfTyKdJlpOEY/dev?class_code=" + form_info.class_code + "&id=" + index;
+            var url = "https://script.google.com/a/students.rowan.edu/macros/s/AKfycbyOdS2_2pq_6GwCq76wXlwdbivFwkibEw0VyGMCeQHdnaZcb5Oi/exec?class_code=" + form_info.class_code + "&id=" + index;
 
             GmailApp.sendEmail(
                 email,
