@@ -367,7 +367,24 @@ function submitTest(responses) {
     if (passed) {
         // Generate certificate and email it
         Logger.log("passed, generating certificate");
-        var copyFile = DriveApp.getFileById(certificate_template_id).makeCopy();
+
+        var new_certificate_template_id = registration_sheet.getRange(2, 8).getValue();
+
+        if (new_certificate_template_id == "" || new_certificate_template_id == null) {
+            new_certificate_template_id = certificate_template_id;
+            Logger.log("no certificate id found, using default");
+        }
+
+        Logger.log("using certificate id: " + new_certificate_template_id);
+        var certificate_template = DriveApp.getFileById(new_certificate_template_id);
+
+        if (certificate_template == null) {
+            certificate_template = DriveApp.getFileById(certificate_template_id);
+            Logger.log("could not open certificate template, using default");
+        }
+
+        var copyFile = certificate_template.makeCopy();
+
         var copyId = copyFile.getId();
         var copyDoc = DocumentApp.openById(copyId);
         var copyBody = copyDoc.getActiveSection();
@@ -478,9 +495,6 @@ function doGet(event) {
     var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
     var registration_sheet = registration_spreadsheet.getSheetByName(class_code);
 
-    var config_name = registration_sheet.getRange(2, 6).getValue();
-    Logger.log("config name: " + config_name);
-
     var row_number = parseInt(id) + 4;
 
     if (registration_sheet == undefined || registration_sheet == null || row_number == NaN || row_number == null || row_number == undefined) {
@@ -489,6 +503,9 @@ function doGet(event) {
 
     var registration_range = registration_sheet.getRange(row_number, 1, 1, registration_sheet.getLastColumn());
     var registration_row = registration_range.getValues()[0];
+
+    var config_name = registration_sheet.getRange(2, 6).getValue();
+    Logger.log("config name: " + config_name);
 
     Logger.log(JSON.stringify(registration_row));
 
