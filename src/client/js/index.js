@@ -1,5 +1,5 @@
 
-
+var status_element = document.getElementById("status");
 var test_element = document.getElementById("test");
 var questions_list_element = document.getElementById("questions");
 var submit_button = document.getElementById("submit_button");
@@ -12,6 +12,9 @@ function onQuestionsLoad(questions) {
 
     questions_list_element.appendChild(questions_list.element);
 
+    status_element.innerHTML = "";
+    test_element.classList.remove("d-none");
+
     submit_button.onclick = function(event) {
         var responses = {
             answers: questions_list.getAnswers(),
@@ -21,6 +24,7 @@ function onQuestionsLoad(questions) {
 
         console.log(responses);
         test_element.classList += " d-none";
+        status_element.innerHTML = "Your test has been sucessfully sumbitted"
         google.script.run.submitTest(responses);
     }
 }

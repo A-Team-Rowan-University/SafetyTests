@@ -197,10 +197,12 @@ function onEmailTests(event) {
     var registration_spreadsheet = SpreadsheetApp.openById(registration_spreadsheet_id);
     var registration_sheet = registration_spreadsheet.getSheetByName(form_info.class_code);
 
+    log(INFO, log_context, "Got info");
+
     var student_rows = registration_sheet.getDataRange().getValues().slice(3);
     log_context.student_rows = student_rows;
 
-    log(INFO, log_context, "Got info, sending emails");
+    log(INFO, log_context, "Sending emails");
 
     student_rows.forEach(function (student, index) {
 
